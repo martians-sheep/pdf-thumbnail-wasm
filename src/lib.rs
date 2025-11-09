@@ -6,11 +6,6 @@ mod image_processor;
 use wasm_bindgen::prelude::*;
 use types::*;
 
-// `wee_alloc`フィーチャが有効な場合、グローバルアロケータとして使用
-#[cfg(feature = "wee_alloc")]
-#[global_allocator]
-static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
-
 /// WASMモジュールの初期化
 /// 他の関数を呼び出す前に実行する必要があります
 #[wasm_bindgen(start)]
@@ -19,7 +14,7 @@ pub fn init() {
     #[cfg(feature = "console_error_panic_hook")]
     console_error_panic_hook::set_once();
 
-    utils::log("pdf-thumbnail-wasm initialized");
+    utils::log("pdf-thumbnail-wasm initialized with Pdfium");
 }
 
 /// PDFサムネイル処理クラス
