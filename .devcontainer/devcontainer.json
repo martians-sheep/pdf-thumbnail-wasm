@@ -1,0 +1,81 @@
+{
+  "name": "PDF Thumbnail WASM Development",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+
+  // VSCode設定
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "rust-analyzer.cargo.features": "all",
+        "rust-analyzer.checkOnSave.command": "clippy",
+        "editor.formatOnSave": true,
+        "[rust]": {
+          "editor.defaultFormatter": "rust-lang.rust-analyzer",
+          "editor.formatOnSave": true
+        },
+        "[typescript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true
+        },
+        "[typescriptreact]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode",
+          "editor.formatOnSave": true
+        },
+        "[json]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "files.watcherExclude": {
+          "**/target/**": true,
+          "**/pkg/**": true,
+          "**/pkg-node/**": true,
+          "**/pkg-bundler/**": true,
+          "**/node_modules/**": true
+        }
+      },
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "vadimcn.vscode-lldb",
+        "serayuzgur.crates",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  },
+
+  // ポートフォワーディング
+  "forwardPorts": [5173],
+  "portsAttributes": {
+    "5173": {
+      "label": "Vite Dev Server",
+      "onAutoForward": "notify"
+    }
+  },
+
+  // コンテナ作成後のコマンド
+  "postCreateCommand": "pnpm install",
+
+  // 開発時のコマンド
+  "postStartCommand": "echo 'Development container ready! Run \"pnpm run build:wasm\" to build WASM module.'",
+
+  // リモートユーザー
+  "remoteUser": "vscode",
+
+  // コンテナの機能
+  "features": {},
+
+  // マウント設定
+  "mounts": [
+    // Cargo のキャッシュを永続化
+    "source=pdf-thumbnail-wasm-cargo-cache,target=/usr/local/cargo/registry,type=volume",
+    // Rustのターゲットディレクトリを永続化（ビルド高速化）
+    "source=pdf-thumbnail-wasm-target-cache,target=${containerWorkspaceFolder}/target,type=volume"
+  ],
+
+  // 環境変数
+  "remoteEnv": {
+    "CARGO_HOME": "/usr/local/cargo",
+    "RUSTUP_HOME": "/usr/local/rustup"
+  }
+}

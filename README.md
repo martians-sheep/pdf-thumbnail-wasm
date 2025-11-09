@@ -216,6 +216,35 @@ PDFの総ページ数を取得します。
 - Vercel Edge Functions
 - Deno 1.0+
 
+## 🐳 DevContainer / Codespaces
+
+このプロジェクトは、VS Code DevContainerとGitHub Codespacesに対応しています。すべての開発ツールが事前設定された環境で、すぐに開発を始められます。
+
+### VS Code DevContainer で開く
+
+1. [Dev Containers拡張機能](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers)をインストール
+2. このリポジトリをクローン
+3. VS Codeで開く
+4. コマンドパレット（`Cmd/Ctrl + Shift + P`）から "Dev Containers: Reopen in Container" を選択
+
+### GitHub Codespaces で開く
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/martians-sheep/pdf-thumbnail-wasm)
+
+ブラウザ上でそのまま開発できます。環境構築は不要です。
+
+### 含まれるツール
+
+- ✅ Rust 1.75+ (wasm32-unknown-unknownターゲット付き)
+- ✅ wasm-pack
+- ✅ Node.js 18.x
+- ✅ pnpm
+- ✅ cargo-watch（自動リビルド）
+- ✅ rustfmt & clippy
+- ✅ 推奨VSCode拡張機能
+
+詳細は [.devcontainer/README.md](.devcontainer/README.md) を参照してください。
+
 ## 🔧 開発
 
 ### 前提条件
