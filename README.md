@@ -326,17 +326,6 @@ pdf-thumbnail-wasm/
 └── vitest.config.ts       # Vitest設定
 ```
 
-## 🤝 コントリビューション
-
-コントリビューションを歓迎します！以下の手順でお願いします：
-
-1. このリポジトリをフォーク
-2. フィーチャーブランチを作成 (`git checkout -b feature/amazing-feature`)
-3. 変更をコミット (`git commit -m 'Add amazing feature'`)
-4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
-5. プルリクエストを作成
-
-詳細は [CONTRIBUTING.md](CONTRIBUTING.md) を参照してください。
 
 ## 📄 ライセンス
 
@@ -349,38 +338,6 @@ MIT License - 詳細は [LICENSE](LICENSE) ファイルを参照してくださ�
 - [MuPDF](https://mupdf.com/) - 高速PDFレンダリングエンジン
 - [wasm-bindgen](https://github.com/rustwasm/wasm-bindgen) - Rust/WebAssemblyバインディング
 - [image-rs](https://github.com/image-rs/image) - Rust画像処理ライブラリ
-
-## 🗺️ ロードマップ
-
-### v1.0 (現在)
-- ✅ 基本的なPDFレンダリング
-- ✅ 複数フォーマット対応
-- ✅ バッチ処理
-- ✅ ストリーミング処理
-
-### v2.0 (計画中)
-- [ ] OCR機能統合
-- [ ] PDFメタデータ抽出
-- [ ] カスタムフォント対応
-- [ ] 暗号化PDF対応
-- [ ] プラグインシステム
-
-### エコシステム
-- [ ] React/Vue/Svelteコンポーネント
-- [ ] CLIツール
-- [ ] Docker イメージ
-- [ ] GitHub Action
-- [ ] VS Code拡張機能
-
-## 📞 サポート
-
-- 📝 [Issues](https://github.com/martians-sheep/pdf-thumbnail-wasm/issues) - バグレポート・機能リクエスト
-- 💬 [Discussions](https://github.com/martians-sheep/pdf-thumbnail-wasm/discussions) - 質問・ディスカッション
-- 📧 Email: [your-email@example.com]
-
-## ⭐ Star History
-
-このプロジェクトが役に立った場合は、ぜひスターをお願いします！
 
 ---
 
