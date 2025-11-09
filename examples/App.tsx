@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import './style.css';
+import init, { PdfThumbnail } from '../pkg/pdf_thumbnail_wasm.js';
 
 interface ThumbnailResult {
   url: string;
@@ -29,16 +30,16 @@ const App: React.FC = () => {
     pageRange: '1-3'
   });
 
-  // WASM初期化 (実際のビルド後に有効化)
+  // WASM初期化
   useEffect(() => {
     const initWasm = async () => {
       try {
-        // TODO: Uncomment after wasm-pack build
-        // await init();
+        await init();
         setIsWasmReady(true);
-        console.log('✅ WASM module initialized (placeholder mode)');
+        console.log('✅ WASM module initialized');
       } catch (err) {
         setError(`WASM初期化エラー: ${err}`);
+        console.error('WASM initialization error:', err);
       }
     };
     initWasm();
@@ -56,7 +57,7 @@ const App: React.FC = () => {
     }
   };
 
-  // サムネイル生成処理（プレースホルダー実装）
+  // サムネイル生成処理（WASM実装）
   const generateThumbnail = useCallback(async () => {
     if (!selectedFile || !isWasmReady) return;
 
@@ -64,58 +65,93 @@ const App: React.FC = () => {
     setError(null);
     setProgress(0);
 
+    let processor: PdfThumbnail | null = null;
+
     try {
       const startTime = performance.now();
 
       console.log('📄 Processing PDF:', selectedFile.name);
 
-      // プレースホルダー実装：実際のWASMビルド後に置き換え
-      // TODO: Uncomment and implement after wasm-pack build
-      /*
+      // PDFデータを読み込んでWASM処理クラスを初期化
       const arrayBuffer = await selectedFile.arrayBuffer();
       const pdfData = new Uint8Array(arrayBuffer);
-      const processor = new PdfThumbnail(pdfData);
+      processor = new PdfThumbnail(pdfData);
       const pageCount = processor.getPageCount();
-      */
+
+      console.log(`📊 Page count: ${pageCount}`);
 
       const results: ThumbnailResult[] = [];
 
       if (options.multiplePages) {
-        const pages = parsePageRange(options.pageRange, 10);
+        const pages = parsePageRange(options.pageRange, pageCount);
 
         for (let i = 0; i < pages.length; i++) {
           setProgress((i + 1) / pages.length * 100);
 
-          // プレースホルダー：実際のサムネイル生成
-          await new Promise(resolve => setTimeout(resolve, 100));
+          const pageStartTime = performance.now();
+
+          // WASM経由でサムネイルを生成
+          const thumbnailData = await processor.generateThumbnail({
+            page: pages[i],
+            width: options.width,
+            height: options.height,
+            format: options.format,
+            quality: options.quality,
+            scale: options.scale
+          });
+
+          // バイナリデータをBase64エンコードしてData URLに変換
+          const base64 = btoa(String.fromCharCode(...thumbnailData));
+          const mimeType = options.format === 'png' ? 'image/png' :
+                          options.format === 'webp' ? 'image/webp' : 'image/jpeg';
 
           results.push({
-            url: 'data:image/svg+xml;base64,' + btoa(createPlaceholderSvg(options.width, options.height, pages[i])),
+            url: `data:${mimeType};base64,${base64}`,
             width: options.width,
             height: options.height,
             page: pages[i],
-            processingTime: 50 + Math.random() * 50
+            processingTime: performance.now() - pageStartTime
           });
+
+          console.log(`✅ Page ${pages[i]} generated in ${(performance.now() - pageStartTime).toFixed(2)}ms`);
         }
       } else {
-        await new Promise(resolve => setTimeout(resolve, 100));
+        const pageStartTime = performance.now();
+
+        // 単一ページのサムネイル生成
+        const thumbnailData = await processor.generateThumbnail({
+          page: options.page,
+          width: options.width,
+          height: options.height,
+          format: options.format,
+          quality: options.quality,
+          scale: options.scale
+        });
+
+        const base64 = btoa(String.fromCharCode(...thumbnailData));
+        const mimeType = options.format === 'png' ? 'image/png' :
+                        options.format === 'webp' ? 'image/webp' : 'image/jpeg';
 
         results.push({
-          url: 'data:image/svg+xml;base64,' + btoa(createPlaceholderSvg(options.width, options.height, options.page)),
+          url: `data:${mimeType};base64,${base64}`,
           width: options.width,
           height: options.height,
           page: options.page,
-          processingTime: performance.now() - startTime
+          processingTime: performance.now() - pageStartTime
         });
       }
 
       setThumbnails(results);
-      console.log(`✅ Total processing time: ${performance.now() - startTime}ms`);
+      console.log(`✅ Total processing time: ${(performance.now() - startTime).toFixed(2)}ms`);
 
     } catch (err) {
       console.error('Thumbnail generation error:', err);
       setError(`エラー: ${err}`);
     } finally {
+      // メモリ解放
+      if (processor) {
+        processor.dispose();
+      }
       setIsProcessing(false);
       setProgress(100);
     }
