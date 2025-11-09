@@ -1,29 +1,29 @@
 use serde::{Deserialize, Serialize};
 
-/// Thumbnail generation options
+/// サムネイル生成オプション
 #[derive(Debug, Clone, Deserialize)]
 pub struct ThumbnailOptions {
-    /// Page number (1-indexed)
+    /// ページ番号（1始まり）
     #[serde(default = "default_page")]
     pub page: u32,
 
-    /// Output width in pixels
+    /// 出力幅（ピクセル単位）
     #[serde(default = "default_width")]
     pub width: u32,
 
-    /// Output height in pixels (auto if not specified)
+    /// 出力高さ（ピクセル単位、未指定の場合は自動）
     #[serde(default)]
     pub height: Option<u32>,
 
-    /// Output format
+    /// 出力フォーマット
     #[serde(default = "default_format")]
     pub format: ImageFormat,
 
-    /// Quality (1-100) for JPEG/WebP
+    /// 品質（1-100、JPEG/WebP用）
     #[serde(default = "default_quality")]
     pub quality: u8,
 
-    /// Rendering scale factor
+    /// レンダリングスケール係数
     #[serde(default = "default_scale")]
     pub scale: f32,
 }
@@ -61,7 +61,7 @@ fn default_scale() -> f32 {
     2.0
 }
 
-/// Image format enumeration
+/// 画像フォーマット列挙型
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ImageFormat {
@@ -88,7 +88,7 @@ impl ImageFormat {
     }
 }
 
-/// Page information
+/// ページ情報
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PageInfo {
     pub page: u32,
@@ -97,22 +97,22 @@ pub struct PageInfo {
     pub rotation: i32,
 }
 
-/// Batch generation options
+/// バッチ生成オプション
 #[derive(Debug, Clone, Deserialize)]
 pub struct BatchOptions {
-    /// Pages to generate (if not specified, generates all pages)
+    /// 生成するページ（未指定の場合は全ページを生成）
     #[serde(default)]
     pub pages: Option<Vec<u32>>,
 
-    /// Multiple sizes to generate
+    /// 生成する複数のサイズ
     #[serde(default)]
     pub sizes: Option<Vec<SizeSpec>>,
 
-    /// Base options
+    /// 基本オプション
     #[serde(flatten)]
     pub base: ThumbnailOptions,
 
-    /// Concurrency level
+    /// 並列処理レベル
     #[serde(default = "default_concurrency")]
     pub concurrency: u32,
 }
@@ -121,7 +121,7 @@ fn default_concurrency() -> u32 {
     4
 }
 
-/// Size specification for batch generation
+/// バッチ生成用のサイズ指定
 #[derive(Debug, Clone, Deserialize)]
 pub struct SizeSpec {
     pub name: String,

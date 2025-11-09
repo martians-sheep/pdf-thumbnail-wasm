@@ -6,24 +6,24 @@ mod image_processor;
 use wasm_bindgen::prelude::*;
 use types::*;
 
-// When the `wee_alloc` feature is enabled, use `wee_alloc` as the global allocator.
+// `wee_alloc`フィーチャが有効な場合、グローバルアロケータとして使用
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-/// Initialize the WASM module
-/// This should be called before any other functions
+/// WASMモジュールの初期化
+/// 他の関数を呼び出す前に実行する必要があります
 #[wasm_bindgen(start)]
 pub fn init() {
-    // Set panic hook for better error messages in the browser console
+    // ブラウザコンソールでのエラーメッセージ改善のためパニックフックを設定
     #[cfg(feature = "console_error_panic_hook")]
     console_error_panic_hook::set_once();
 
     utils::log("pdf-thumbnail-wasm initialized");
 }
 
-/// PdfThumbnail processor
-/// Main class for generating thumbnails from PDF documents
+/// PDFサムネイル処理クラス
+/// PDFドキュメントからサムネイルを生成するメインクラス
 #[wasm_bindgen]
 pub struct PdfThumbnail {
     pdf_data: Vec<u8>,
@@ -32,14 +32,14 @@ pub struct PdfThumbnail {
 
 #[wasm_bindgen]
 impl PdfThumbnail {
-    /// Create a new PdfThumbnail instance from PDF data
+    /// PDFデータから新しいPdfThumbnailインスタンスを作成
     #[wasm_bindgen(constructor)]
     pub fn new(pdf_data: &[u8]) -> Result<PdfThumbnail, JsValue> {
         utils::log(&format!("Creating PdfThumbnail with {} bytes", pdf_data.len()));
 
-        // For now, we'll create a placeholder implementation
-        // In Phase 1, we'll integrate actual PDF rendering
-        let page_count = 10; // Placeholder
+        // 現在はプレースホルダー実装
+        // Phase 1で実際のPDFレンダリングを統合予定
+        let page_count = 10; // プレースホルダー
 
         Ok(PdfThumbnail {
             pdf_data: pdf_data.to_vec(),
@@ -47,13 +47,13 @@ impl PdfThumbnail {
         })
     }
 
-    /// Get the total number of pages in the PDF
+    /// PDFの総ページ数を取得
     #[wasm_bindgen(js_name = getPageCount)]
     pub fn get_page_count(&self) -> u32 {
         self.page_count
     }
 
-    /// Get information about a specific page
+    /// 特定のページに関する情報を取得
     #[wasm_bindgen(js_name = getPageInfo)]
     pub fn get_page_info(&self, page: u32) -> Result<JsValue, JsValue> {
         if page < 1 || page > self.page_count {
@@ -65,8 +65,8 @@ impl PdfThumbnail {
 
         let info = PageInfo {
             page,
-            width: 595.0,  // A4 width in points (placeholder)
-            height: 842.0, // A4 height in points (placeholder)
+            width: 595.0,  // A4幅（ポイント単位、プレースホルダー）
+            height: 842.0, // A4高さ（ポイント単位、プレースホルダー）
             rotation: 0,
         };
 
@@ -74,7 +74,7 @@ impl PdfThumbnail {
             .map_err(|e| JsValue::from_str(&format!("Serialization error: {}", e)))
     }
 
-    /// Generate a thumbnail for a single page
+    /// 単一ページのサムネイルを生成
     #[wasm_bindgen(js_name = generateThumbnail)]
     pub async fn generate_thumbnail(&self, options: JsValue) -> Result<Vec<u8>, JsValue> {
         let opts: ThumbnailOptions = serde_wasm_bindgen::from_value(options)
@@ -85,7 +85,7 @@ impl PdfThumbnail {
             opts.page, opts.width
         ));
 
-        // Validate page number
+        // ページ番号を検証
         if opts.page < 1 || opts.page > self.page_count {
             return Err(JsValue::from_str(&format!(
                 "Page {} out of range (1-{})",
@@ -93,17 +93,17 @@ impl PdfThumbnail {
             )));
         }
 
-        // For now, generate a placeholder image
-        // In Phase 1, we'll implement actual PDF rendering
+        // 現在はプレースホルダー画像を生成
+        // Phase 1で実際のPDFレンダリングを実装予定
         image_processor::generate_placeholder_image(&opts)
             .map_err(|e| JsValue::from_str(&format!("Image generation error: {}", e)))
     }
 
-    /// Dispose of the PdfThumbnail instance and free memory
+    /// PdfThumbnailインスタンスを破棄してメモリを解放
     #[wasm_bindgen]
     pub fn dispose(self) {
         utils::log("PdfThumbnail disposed");
-        // Memory will be automatically freed when the struct is dropped
+        // 構造体がドロップされると自動的にメモリが解放されます
     }
 }
 

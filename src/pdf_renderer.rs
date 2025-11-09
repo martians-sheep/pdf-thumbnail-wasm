@@ -1,8 +1,8 @@
 use crate::types::*;
 
-/// PDF Renderer
-/// This module will handle PDF rendering using MuPDF or Pdfium
-/// Currently a placeholder implementation
+/// PDFレンダラー
+/// このモジュールはMuPDFまたはPdfiumを使用してPDFレンダリングを処理します
+/// 現在はプレースホルダー実装
 
 pub struct PdfRenderer {
     pdf_data: Vec<u8>,
@@ -10,40 +10,40 @@ pub struct PdfRenderer {
 
 impl PdfRenderer {
     pub fn new(pdf_data: Vec<u8>) -> Result<Self, String> {
-        // TODO: Initialize MuPDF/Pdfium
+        // TODO: MuPDF/Pdfiumを初期化
         Ok(Self { pdf_data })
     }
 
     pub fn get_page_count(&self) -> Result<u32, String> {
-        // TODO: Get actual page count from PDF
-        // Placeholder: return fixed count
+        // TODO: PDFから実際のページ数を取得
+        // プレースホルダー: 固定値を返す
         Ok(10)
     }
 
     pub fn get_page_info(&self, page: u32) -> Result<PageInfo, String> {
-        // TODO: Get actual page dimensions from PDF
-        // Placeholder: return A4 dimensions
+        // TODO: PDFから実際のページサイズを取得
+        // プレースホルダー: A4サイズを返す
         Ok(PageInfo {
             page,
-            width: 595.0,  // A4 width in points
-            height: 842.0, // A4 height in points
+            width: 595.0,  // A4幅（ポイント単位）
+            height: 842.0, // A4高さ（ポイント単位）
             rotation: 0,
         })
     }
 
     pub fn render_page(&self, page: u32, scale: f32) -> Result<RawImage, String> {
-        // TODO: Implement actual PDF rendering
-        // For now, return placeholder dimensions
+        // TODO: 実際のPDFレンダリングを実装
+        // 現在はプレースホルダーサイズを返す
         let info = self.get_page_info(page)?;
 
         let width = (info.width * scale) as u32;
         let height = (info.height * scale) as u32;
 
-        // Create a placeholder white image with RGB data
+        // RGBデータで白いプレースホルダー画像を作成
         let size = (width * height * 3) as usize;
-        let mut data = vec![255u8; size]; // White background
+        let mut data = vec![255u8; size]; // 白背景
 
-        // Add some placeholder content (simple gray border)
+        // プレースホルダーコンテンツを追加（シンプルなグレーの枠線）
         let border_width = 10;
         for y in 0..height {
             for x in 0..width {
@@ -67,11 +67,11 @@ impl PdfRenderer {
     }
 }
 
-/// Raw image data (RGB format)
+/// 生の画像データ（RGB形式）
 pub struct RawImage {
     pub width: u32,
     pub height: u32,
-    pub data: Vec<u8>, // RGB format (3 bytes per pixel)
+    pub data: Vec<u8>, // RGB形式（ピクセルあたり3バイト）
 }
 
 #[cfg(test)]
