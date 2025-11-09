@@ -1,12 +1,12 @@
-# Development Setup Guide
+# 開発環境セットアップガイド
 
-This guide will help you set up the development environment for pdf-thumbnail-wasm.
+このガイドでは、pdf-thumbnail-wasmの開発環境をセットアップする方法を説明します。
 
-## Prerequisites
+## 前提条件
 
-### Required Tools
+### 必須ツール
 
-1. **Rust** (1.70 or higher)
+1. **Rust** (1.70以上)
    ```bash
    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
    rustup target add wasm32-unknown-unknown
@@ -17,253 +17,253 @@ This guide will help you set up the development environment for pdf-thumbnail-wa
    curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
    ```
 
-3. **Node.js** (16.0.0 or higher)
-   - Download from [nodejs.org](https://nodejs.org/)
-   - Or use [nvm](https://github.com/nvm-sh/nvm):
+3. **Node.js** (16.0.0以上)
+   - [nodejs.org](https://nodejs.org/)からダウンロード
+   - または[nvm](https://github.com/nvm-sh/nvm)を使用:
      ```bash
      nvm install 18
      nvm use 18
      ```
 
-4. **pnpm** (recommended) or npm
+4. **pnpm** (推奨) または npm
    ```bash
    npm install -g pnpm
    ```
 
-### Optional Tools
+### オプションツール
 
-- **VS Code** with recommended extensions (see `.vscode/extensions.json`)
-- **Rust Analyzer** for IDE support
-- **cargo-watch** for auto-rebuild:
+- **VS Code** と推奨拡張機能（`.vscode/extensions.json`を参照）
+- **Rust Analyzer** - IDE サポート用
+- **cargo-watch** - 自動リビルド用:
   ```bash
   cargo install cargo-watch
   ```
 
-## Initial Setup
+## 初期セットアップ
 
-1. **Clone the repository**
+1. **リポジトリをクローン**
    ```bash
    git clone https://github.com/martians-sheep/pdf-thumbnail-wasm.git
    cd pdf-thumbnail-wasm
    ```
 
-2. **Install Node.js dependencies**
+2. **Node.js依存関係のインストール**
    ```bash
    pnpm install
    ```
 
-3. **Build WASM module**
+3. **WASMモジュールのビルド**
    ```bash
-   # Build for all targets
+   # すべてのターゲット向けにビルド
    pnpm run build:all
 
-   # Or build for specific targets
-   pnpm run build:wasm      # Web
-   pnpm run build:node      # Node.js
-   pnpm run build:bundler   # Bundler
+   # または特定のターゲット向けにビルド
+   pnpm run build:wasm      # Web向け
+   pnpm run build:node      # Node.js向け
+   pnpm run build:bundler   # Bundler向け
    ```
 
-4. **Verify setup**
+4. **セットアップの確認**
    ```bash
-   # Run tests
+   # テストを実行
    pnpm test
 
-   # Run Rust tests
+   # Rustテストを実行
    cargo test
 
-   # Check formatting
+   # フォーマットをチェック
    cargo fmt -- --check
 
-   # Run clippy
+   # clippyを実行
    cargo clippy -- -D warnings
    ```
 
-## Development Workflow
+## 開発ワークフロー
 
-### Running the Example
+### サンプルアプリケーションの実行
 
-1. **Add a sample PDF** to the `public/` directory:
+1. **サンプルPDFを追加** - `public/`ディレクトリに配置:
    ```bash
    cp /path/to/your/sample.pdf public/sample.pdf
    ```
 
-2. **Start development server**:
+2. **開発サーバーを起動**:
    ```bash
    pnpm run example
    ```
 
-3. **Open browser** to http://localhost:5173
+3. **ブラウザを開く** - http://localhost:5173
 
-### Making Changes
+### コードの変更
 
-1. **Edit Rust code** in `src/`:
+1. **Rustコードの編集** - `src/`内のファイルを編集:
    ```bash
-   # Auto-rebuild on changes
+   # 変更時に自動リビルド
    cargo watch -x 'build --target wasm32-unknown-unknown'
    ```
 
-2. **Rebuild WASM**:
+2. **WASMを再ビルド**:
    ```bash
    pnpm run build:wasm
    ```
 
-3. **Reload browser** to see changes
+3. **ブラウザをリロード** - 変更を確認
 
-### Testing
+### テスト
 
 ```bash
-# Run all tests
+# すべてのテストを実行
 pnpm test
 
-# Run Rust tests
+# Rustテストのみ実行
 cargo test
 
-# Run Rust tests with output
+# Rustテストを出力付きで実行
 cargo test -- --nocapture
 
-# Run specific test
+# 特定のテストを実行
 cargo test test_name
 
-# Run JS tests in watch mode
+# JSテストをウォッチモードで実行
 pnpm run test:watch
 
-# Run tests with UI
+# UIモードでテストを実行
 pnpm run test:ui
 
-# Run WASM tests in browser
+# ブラウザでWASMテストを実行
 pnpm run test:wasm
 ```
 
-### Benchmarking
+### ベンチマーク
 
 ```bash
-# Run Rust benchmarks
+# Rustベンチマークを実行
 cargo bench
 
-# Run specific benchmark
+# 特定のベンチマークを実行
 cargo bench bench_name
 ```
 
-### Linting and Formatting
+### リントとフォーマット
 
 ```bash
-# Format Rust code
+# Rustコードをフォーマット
 cargo fmt
 
-# Check formatting
+# フォーマットをチェック
 cargo fmt -- --check
 
-# Run clippy
+# clippyを実行
 cargo clippy
 
-# Run clippy with warnings as errors
+# 警告をエラーとしてclippyを実行
 cargo clippy -- -D warnings
 ```
 
-## Project Structure
+## プロジェクト構造
 
 ```
 pdf-thumbnail-wasm/
-├── .github/              # GitHub Actions workflows
-├── .vscode/              # VS Code settings
-├── benches/              # Rust benchmarks
-├── examples/             # Demo application
-│   ├── index.html       # Entry HTML
-│   ├── App.tsx          # React demo app
-│   └── style.css        # Styles
-├── js/                   # TypeScript wrappers
-│   ├── index.ts         # Main exports
-│   ├── types.d.ts       # Type definitions
-│   ├── browser.ts       # Browser utilities
-│   └── node.ts          # Node.js utilities
-├── public/               # Public assets
-├── src/                  # Rust source code
-│   ├── lib.rs           # Main entry point
-│   ├── pdf_renderer.rs  # PDF rendering
-│   ├── image_processor.rs # Image processing
-│   ├── types.rs         # Type definitions
-│   └── utils.rs         # Utilities
-├── tests/                # Test files
-├── pkg/                  # WASM build output (web)
-├── pkg-node/            # WASM build output (node)
-├── pkg-bundler/         # WASM build output (bundler)
-├── Cargo.toml           # Rust configuration
-├── package.json         # Node.js configuration
-├── tsconfig.json        # TypeScript configuration
-├── vite.config.ts       # Vite configuration
-└── vitest.config.ts     # Vitest configuration
+├── .github/              # GitHub Actionsワークフロー
+├── .vscode/              # VS Code設定
+├── benches/              # Rustベンチマーク
+├── examples/             # デモアプリケーション
+│   ├── index.html       # エントリHTML
+│   ├── App.tsx          # Reactデモアプリ
+│   └── style.css        # スタイル
+├── js/                   # TypeScriptラッパー
+│   ├── index.ts         # メインエクスポート
+│   ├── types.d.ts       # 型定義
+│   ├── browser.ts       # ブラウザユーティリティ
+│   └── node.ts          # Node.jsユーティリティ
+├── public/               # 公開アセット
+├── src/                  # Rustソースコード
+│   ├── lib.rs           # メインエントリポイント
+│   ├── pdf_renderer.rs  # PDFレンダリング
+│   ├── image_processor.rs # 画像処理
+│   ├── types.rs         # 型定義
+│   └── utils.rs         # ユーティリティ
+├── tests/                # テストファイル
+├── pkg/                  # WASMビルド出力（Web）
+├── pkg-node/            # WASMビルド出力（Node.js）
+├── pkg-bundler/         # WASMビルド出力（Bundler）
+├── Cargo.toml           # Rust設定
+├── package.json         # Node.js設定
+├── tsconfig.json        # TypeScript設定
+├── vite.config.ts       # Vite設定
+└── vitest.config.ts     # Vitest設定
 ```
 
-## Build Outputs
+## ビルド出力
 
-After running `pnpm run build:all`, you'll have:
+`pnpm run build:all`を実行すると、以下が生成されます:
 
-- **pkg/** - Web target (ES modules)
-- **pkg-node/** - Node.js target (CommonJS)
-- **pkg-bundler/** - Bundler target (for webpack, rollup, etc.)
+- **pkg/** - Webターゲット（ESモジュール）
+- **pkg-node/** - Node.jsターゲット（CommonJS）
+- **pkg-bundler/** - Bundlerターゲット（webpack、rollup等用）
 
-Each directory contains:
-- `*.wasm` - WebAssembly binary
-- `*.js` - JavaScript bindings
-- `*.d.ts` - TypeScript definitions
-- `package.json` - Package metadata
+各ディレクトリには以下が含まれます:
+- `*.wasm` - WebAssemblyバイナリ
+- `*.js` - JavaScriptバインディング
+- `*.d.ts` - TypeScript型定義
+- `package.json` - パッケージメタデータ
 
-## Common Issues
+## よくある問題
 
-### WASM build fails
+### WASMビルドが失敗する
 
-**Problem**: `wasm-pack build` fails with compilation errors
+**問題**: `wasm-pack build`がコンパイルエラーで失敗する
 
-**Solution**:
+**解決策**:
 ```bash
-# Clean build cache
+# ビルドキャッシュをクリーン
 cargo clean
 
-# Update Rust
+# Rustを更新
 rustup update
 
-# Rebuild
+# 再ビルド
 pnpm run build:wasm
 ```
 
-### Module not found errors
+### モジュールが見つからないエラー
 
-**Problem**: Import errors when running examples
+**問題**: サンプル実行時にインポートエラーが発生する
 
-**Solution**:
+**解決策**:
 ```bash
-# Ensure WASM is built
+# WASMがビルドされていることを確認
 pnpm run build:wasm
 
-# Clear Vite cache
+# Viteキャッシュをクリア
 rm -rf node_modules/.vite
 
-# Restart dev server
+# 開発サーバーを再起動
 pnpm run example
 ```
 
-### Tests failing
+### テストが失敗する
 
-**Problem**: Tests fail after making changes
+**問題**: 変更後にテストが失敗する
 
-**Solution**:
+**解決策**:
 ```bash
-# Rebuild WASM
+# WASMを再ビルド
 pnpm run build:all
 
-# Run tests
+# テストを実行
 pnpm test
 ```
 
-## Next Steps
+## 次のステップ
 
-- Read [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines
-- Check [README.md](README.md) for API documentation
-- Explore the [examples/](examples/) directory for usage examples
-- Join discussions in [GitHub Discussions](https://github.com/martians-sheep/pdf-thumbnail-wasm/discussions)
+- [CONTRIBUTING.md](CONTRIBUTING.md)でコントリビューションガイドラインを確認
+- [README.md](README.md)でAPIドキュメントを確認
+- [examples/](examples/)ディレクトリで使用例を確認
+- [GitHub Discussions](https://github.com/martians-sheep/pdf-thumbnail-wasm/discussions)でディスカッションに参加
 
-## Getting Help
+## ヘルプ
 
 - **Issues**: [GitHub Issues](https://github.com/martians-sheep/pdf-thumbnail-wasm/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/martians-sheep/pdf-thumbnail-wasm/discussions)
-- **Documentation**: [README.md](README.md)
+- **ドキュメント**: [README.md](README.md)
