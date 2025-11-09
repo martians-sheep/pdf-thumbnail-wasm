@@ -1,0 +1,52 @@
+[package]
+name = "pdf-thumbnail-wasm"
+version = "0.1.0"
+authors = ["Your Name <your.email@example.com>"]
+edition = "2021"
+description = "High-performance PDF thumbnail generation for browsers, Node.js, and Edge environments"
+license = "MIT"
+repository = "https://github.com/martians-sheep/pdf-thumbnail-wasm"
+keywords = ["pdf", "thumbnail", "wasm", "webassembly", "image"]
+categories = ["wasm", "multimedia::images"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+console_error_panic_hook = "0.1"
+wee_alloc = { version = "0.4", optional = true }
+image = { version = "0.24", default-features = false, features = ["jpeg", "png", "webp"] }
+base64 = "0.21"
+serde = { version = "1.0", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+js-sys = "0.3"
+
+[dependencies.web-sys]
+version = "0.3"
+features = [
+  "console",
+  "Window",
+  "Document",
+  "ImageData",
+]
+
+# PDF rendering - will add MuPDF or Pdfium integration later
+# For now we'll use pdf crate as a placeholder
+# mupdf = { version = "0.4", features = ["wasm"], optional = true }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
+
+[profile.release]
+opt-level = "z"     # Optimize for size
+lto = true          # Enable link-time optimization
+codegen-units = 1   # Better optimization
+strip = true        # Strip symbols
+
+[features]
+default = ["console_error_panic_hook"]
+wee_alloc_feature = ["wee_alloc"]
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-Oz", "--enable-mutable-globals"]

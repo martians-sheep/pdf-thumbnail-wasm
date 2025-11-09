@@ -1,0 +1,80 @@
+{
+  "name": "pdf-thumbnail-wasm",
+  "version": "0.1.0",
+  "description": "High-performance PDF thumbnail generation for browsers, Node.js, and Edge environments",
+  "main": "./pkg/pdf_thumbnail_wasm.js",
+  "module": "./pkg/pdf_thumbnail_wasm.js",
+  "types": "./pkg/pdf_thumbnail_wasm.d.ts",
+  "files": [
+    "pkg",
+    "pkg-node",
+    "pkg-bundler"
+  ],
+  "exports": {
+    ".": {
+      "import": "./pkg/pdf_thumbnail_wasm.js",
+      "types": "./pkg/pdf_thumbnail_wasm.d.ts"
+    },
+    "./node": {
+      "import": "./pkg-node/pdf_thumbnail_wasm.js",
+      "types": "./pkg-node/pdf_thumbnail_wasm.d.ts"
+    }
+  },
+  "scripts": {
+    "build:wasm": "wasm-pack build --target web --out-dir pkg",
+    "build:node": "wasm-pack build --target nodejs --out-dir pkg-node",
+    "build:bundler": "wasm-pack build --target bundler --out-dir pkg-bundler",
+    "build:all": "npm run build:wasm && npm run build:node && npm run build:bundler",
+    "test": "cargo test && vitest run",
+    "test:ui": "vitest --ui",
+    "test:watch": "vitest watch",
+    "test:rust": "cargo test",
+    "test:wasm": "wasm-pack test --headless --chrome",
+    "bench": "cargo bench",
+    "example": "npm run build:wasm && vite examples",
+    "example:build": "npm run build:wasm && vite build examples",
+    "dev": "vite examples",
+    "lint": "cargo clippy -- -D warnings",
+    "format": "cargo fmt",
+    "clean": "cargo clean && rm -rf pkg pkg-node pkg-bundler node_modules",
+    "prepublishOnly": "npm run build:all && npm test"
+  },
+  "keywords": [
+    "pdf",
+    "thumbnail",
+    "wasm",
+    "webassembly",
+    "image",
+    "rust",
+    "browser",
+    "nodejs",
+    "edge"
+  ],
+  "author": "Your Name <your.email@example.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/martians-sheep/pdf-thumbnail-wasm.git"
+  },
+  "bugs": {
+    "url": "https://github.com/martians-sheep/pdf-thumbnail-wasm/issues"
+  },
+  "homepage": "https://github.com/martians-sheep/pdf-thumbnail-wasm#readme",
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.8",
+    "vitest": "^1.0.4",
+    "@vitest/ui": "^1.0.4"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
