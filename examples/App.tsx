@@ -1,6 +1,13 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import './style.css';
-import init, { PdfThumbnail } from '../pkg/pdf_thumbnail_wasm.js';
+import init, { ImageProcessor } from '../pkg/pdf_thumbnail_wasm.js';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// pdf.js の worker を設定（npmパッケージから直接読み込む）
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString();
 
 interface ThumbnailResult {
   url: string;
@@ -17,6 +24,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [progress, setProgress] = useState(0);
+  const [pageCount, setPageCount] = useState(0);
 
   // サムネイル生成オプション
   const [options, setOptions] = useState({
@@ -46,18 +54,29 @@ const App: React.FC = () => {
   }, []);
 
   // ファイル選択ハンドラー
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && file.type === 'application/pdf') {
       setSelectedFile(file);
       setError(null);
       setThumbnails([]);
+
+      // PDFを読み込んでページ数を取得
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        setPageCount(pdf.numPages);
+        console.log(`📄 PDF loaded: ${pdf.numPages} pages`);
+      } catch (err) {
+        console.error('PDF loading error:', err);
+        setError(`PDFの読み込みエラー: ${err}`);
+      }
     } else {
       setError('PDFファイルを選択してください');
     }
   };
 
-  // サムネイル生成処理（WASM実装）
+  // サムネイル生成処理（pdf.js + WASM実装）
   const generateThumbnail = useCallback(async () => {
     if (!selectedFile || !isWasmReady) return;
 
@@ -65,43 +84,70 @@ const App: React.FC = () => {
     setError(null);
     setProgress(0);
 
-    let processor: PdfThumbnail | null = null;
-
     try {
       const startTime = performance.now();
 
       console.log('📄 Processing PDF:', selectedFile.name);
 
-      // PDFデータを読み込んでWASM処理クラスを初期化
+      // PDFを読み込み
       const arrayBuffer = await selectedFile.arrayBuffer();
-      const pdfData = new Uint8Array(arrayBuffer);
-      processor = new PdfThumbnail(pdfData);
-      const pageCount = processor.getPageCount();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
-      console.log(`📊 Page count: ${pageCount}`);
+      console.log(`📊 Page count: ${pdf.numPages}`);
 
       const results: ThumbnailResult[] = [];
 
       if (options.multiplePages) {
-        const pages = parsePageRange(options.pageRange, pageCount);
+        const pages = parsePageRange(options.pageRange, pdf.numPages);
 
         for (let i = 0; i < pages.length; i++) {
           setProgress((i + 1) / pages.length * 100);
 
+          const pageNum = pages[i];
           const pageStartTime = performance.now();
 
-          // WASM経由でサムネイルを生成
-          const thumbnailData = await processor.generateThumbnail({
-            page: pages[i],
-            width: options.width,
-            height: options.height,
-            format: options.format,
-            quality: options.quality,
-            scale: options.scale
-          });
+          // pdf.jsでページをレンダリング
+          const page = await pdf.getPage(pageNum);
+          const viewport = page.getViewport({ scale: options.scale });
 
-          // バイナリデータをBase64エンコードしてData URLに変換
-          const base64 = btoa(String.fromCharCode(...thumbnailData));
+          // Canvasにレンダリング
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d')!;
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+
+          await page.render({
+            canvasContext: context,
+            viewport: viewport,
+            canvas: canvas
+          }).promise;
+
+          // ImageDataを取得
+          const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
+          // Uint8ClampedArray → Uint8Array に変換
+          const uint8Array = new Uint8Array(imageData.data.buffer);
+
+          // WASMで画像処理（リサイズ・エンコード）
+          const thumbnailData = ImageProcessor.processImageData(
+            canvas.width,
+            canvas.height,
+            uint8Array,
+            options.width,
+            options.height,
+            options.format,
+            options.quality
+          );
+
+          // Base64エンコードしてData URLに変換
+          // 大きな配列の場合はチャンク処理
+          let binary = '';
+          const chunkSize = 8192;
+          for (let i = 0; i < thumbnailData.length; i += chunkSize) {
+            const chunk = thumbnailData.slice(i, i + chunkSize);
+            binary += String.fromCharCode(...chunk);
+          }
+          const base64 = btoa(binary);
           const mimeType = options.format === 'png' ? 'image/png' :
                           options.format === 'webp' ? 'image/webp' : 'image/jpeg';
 
@@ -109,26 +155,54 @@ const App: React.FC = () => {
             url: `data:${mimeType};base64,${base64}`,
             width: options.width,
             height: options.height,
-            page: pages[i],
+            page: pageNum,
             processingTime: performance.now() - pageStartTime
           });
 
-          console.log(`✅ Page ${pages[i]} generated in ${(performance.now() - pageStartTime).toFixed(2)}ms`);
+          console.log(`✅ Page ${pageNum} generated in ${(performance.now() - pageStartTime).toFixed(2)}ms`);
         }
       } else {
         const pageStartTime = performance.now();
 
         // 単一ページのサムネイル生成
-        const thumbnailData = await processor.generateThumbnail({
-          page: options.page,
-          width: options.width,
-          height: options.height,
-          format: options.format,
-          quality: options.quality,
-          scale: options.scale
-        });
+        const page = await pdf.getPage(options.page);
+        const viewport = page.getViewport({ scale: options.scale });
 
-        const base64 = btoa(String.fromCharCode(...thumbnailData));
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d')!;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        await page.render({
+          canvasContext: context,
+          viewport: viewport,
+          canvas: canvas
+        }).promise;
+
+        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
+        // Uint8ClampedArray → Uint8Array に変換
+        const uint8Array = new Uint8Array(imageData.data.buffer);
+
+        // WASMで画像処理
+        const thumbnailData = ImageProcessor.processImageData(
+          canvas.width,
+          canvas.height,
+          uint8Array,
+          options.width,
+          options.height,
+          options.format,
+          options.quality
+        );
+
+        // Base64エンコード（チャンク処理）
+        let binary = '';
+        const chunkSize = 8192;
+        for (let i = 0; i < thumbnailData.length; i += chunkSize) {
+          const chunk = thumbnailData.slice(i, i + chunkSize);
+          binary += String.fromCharCode(...chunk);
+        }
+        const base64 = btoa(binary);
         const mimeType = options.format === 'png' ? 'image/png' :
                         options.format === 'webp' ? 'image/webp' : 'image/jpeg';
 
@@ -148,28 +222,10 @@ const App: React.FC = () => {
       console.error('Thumbnail generation error:', err);
       setError(`エラー: ${err}`);
     } finally {
-      // メモリ解放
-      if (processor) {
-        processor.dispose();
-      }
       setIsProcessing(false);
       setProgress(100);
     }
   }, [selectedFile, isWasmReady, options]);
-
-  // プレースホルダーSVG生成
-  const createPlaceholderSvg = (width: number, height: number, page: number): string => {
-    return `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <rect width="100%" height="100%" fill="#f0f0f0"/>
-      <rect x="10" y="10" width="${width-20}" height="${height-20}" fill="white" stroke="#ddd" stroke-width="2"/>
-      <text x="50%" y="50%" text-anchor="middle" font-family="Arial" font-size="24" fill="#999">
-        Page ${page} Placeholder
-      </text>
-      <text x="50%" y="60%" text-anchor="middle" font-family="Arial" font-size="14" fill="#bbb">
-        Run 'npm run build:wasm' to enable real rendering
-      </text>
-    </svg>`;
-  };
 
   // ページ範囲パース
   const parsePageRange = (range: string, maxPage: number): number[] => {
@@ -203,7 +259,7 @@ const App: React.FC = () => {
     <div className="app">
       <header className="header">
         <h1>🖼️ PDF Thumbnail WASM Demo</h1>
-        <p>高速PDFサムネイル生成 - WebAssembly実装</p>
+        <p>高速PDFサムネイル生成 - pdf.js + WebAssembly</p>
       </header>
 
       <main className="main">
@@ -218,7 +274,7 @@ const App: React.FC = () => {
             />
             <div className="upload-button">
               {selectedFile ? (
-                <span>📄 {selectedFile.name}</span>
+                <span>📄 {selectedFile.name} ({pageCount} pages)</span>
               ) : (
                 <span>PDFファイルを選択</span>
               )}
@@ -236,6 +292,7 @@ const App: React.FC = () => {
               <input
                 type="number"
                 min="1"
+                max={pageCount || 1}
                 value={options.page}
                 onChange={(e) => setOptions({...options, page: parseInt(e.target.value)})}
                 disabled={options.multiplePages}
@@ -352,32 +409,22 @@ const App: React.FC = () => {
           </section>
         )}
 
-        {/* パフォーマンス比較 */}
+        {/* パフォーマンス情報 */}
         <section className="benchmark-section">
-          <h3>🚀 パフォーマンス比較（目標値）</h3>
+          <h3>🚀 技術スタック</h3>
           <table>
-            <thead>
-              <tr>
-                <th>ライブラリ</th>
-                <th>1ページ処理時間</th>
-                <th>メモリ使用量</th>
-              </tr>
-            </thead>
             <tbody>
-              <tr className="highlight">
-                <td>pdf-thumbnail-wasm (This)</td>
-                <td>~50ms</td>
-                <td>~50MB</td>
+              <tr>
+                <td>PDFレンダリング</td>
+                <td>pdf.js (Mozilla)</td>
               </tr>
               <tr>
-                <td>pdfjs-dist</td>
-                <td>~150ms</td>
-                <td>~200MB</td>
+                <td>画像処理</td>
+                <td>Rust + WebAssembly (image-rs)</td>
               </tr>
               <tr>
-                <td>canvas + pdfjs</td>
-                <td>~200ms</td>
-                <td>~250MB</td>
+                <td>エンコード</td>
+                <td>JPEG / PNG / WebP</td>
               </tr>
             </tbody>
           </table>
@@ -385,7 +432,7 @@ const App: React.FC = () => {
       </main>
 
       <footer className="footer">
-        <p>Built with Rust 🦀 + WebAssembly 🌐</p>
+        <p>Built with pdf.js 📄 + Rust 🦀 + WebAssembly 🌐</p>
       </footer>
     </div>
   );
