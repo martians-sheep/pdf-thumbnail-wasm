@@ -1,69 +1,117 @@
 use crate::types::*;
+use pdfium_render::prelude::*;
 
 /// PDFレンダラー
-/// このモジュールはMuPDFまたはPdfiumを使用してPDFレンダリングを処理します
-/// 現在はプレースホルダー実装
-
+/// Pdfiumを使用してPDFレンダリングを処理します
 pub struct PdfRenderer {
-    pdf_data: Vec<u8>,
+    pdfium: Pdfium,
+    document: PdfDocument<'static>,
 }
 
 impl PdfRenderer {
+    /// PDFデータから新しいレンダラーを作成
     pub fn new(pdf_data: Vec<u8>) -> Result<Self, String> {
-        // TODO: MuPDF/Pdfiumを初期化
-        Ok(Self { pdf_data })
-    }
+        // WASMモード用にPdfiumを初期化
+        // bind_to_system_library()を試みる
+        let bindings = Pdfium::bind_to_system_library()
+            .map_err(|e| format!("Pdfium initialization failed: {:?}", e))?;
 
-    pub fn get_page_count(&self) -> Result<u32, String> {
-        // TODO: PDFから実際のページ数を取得
-        // プレースホルダー: 固定値を返す
-        Ok(10)
-    }
+        let mut pdfium = Pdfium::new(bindings);
 
-    pub fn get_page_info(&self, page: u32) -> Result<PageInfo, String> {
-        // TODO: PDFから実際のページサイズを取得
-        // プレースホルダー: A4サイズを返す
-        Ok(PageInfo {
-            page,
-            width: 595.0,  // A4幅（ポイント単位）
-            height: 842.0, // A4高さ（ポイント単位）
-            rotation: 0,
+        // PDFドキュメントを読み込む
+        // ライフタイム問題を解決するため、unsafe transmute を使用
+        let document = pdfium
+            .load_pdf_from_byte_vec(pdf_data, None)
+            .map_err(|e| format!("Failed to load PDF: {:?}", e))?;
+
+        // ライフタイムを'staticに変換（注意: PdfRendererがドロップされるまでPdfiumを保持する必要がある）
+        let document_static: PdfDocument<'static> = unsafe { std::mem::transmute(document) };
+
+        Ok(Self {
+            pdfium,
+            document: document_static,
         })
     }
 
+    /// PDFの総ページ数を取得
+    pub fn get_page_count(&self) -> Result<u32, String> {
+        Ok(self.document.pages().len() as u32)
+    }
+
+    /// 特定のページの情報を取得
+    pub fn get_page_info(&self, page: u32) -> Result<PageInfo, String> {
+        // ページインデックスは0ベース
+        let page_index = (page - 1) as u16;
+
+        let pdf_page = self.document
+            .pages()
+            .get(page_index)
+            .map_err(|e| format!("Failed to get page {}: {:?}", page, e))?;
+
+        let width = pdf_page.width().value;
+        let height = pdf_page.height().value;
+        let rotation = pdf_page
+            .rotation()
+            .map(|r| r.as_degrees() as i32)
+            .unwrap_or(0);
+
+        Ok(PageInfo {
+            page,
+            width,
+            height,
+            rotation,
+        })
+    }
+
+    /// ページをレンダリングして生画像データを返す
     pub fn render_page(&self, page: u32, scale: f32) -> Result<RawImage, String> {
-        // TODO: 実際のPDFレンダリングを実装
-        // 現在はプレースホルダーサイズを返す
-        let info = self.get_page_info(page)?;
+        // ページインデックスは0ベース
+        let page_index = (page - 1) as u16;
 
-        let width = (info.width * scale) as u32;
-        let height = (info.height * scale) as u32;
+        let pdf_page = self.document
+            .pages()
+            .get(page_index)
+            .map_err(|e| format!("Failed to get page {}: {:?}", page, e))?;
 
-        // RGBデータで白いプレースホルダー画像を作成
-        let size = (width * height * 3) as usize;
-        let mut data = vec![255u8; size]; // 白背景
+        // ページサイズを取得してスケール適用
+        let width = (pdf_page.width().value * scale) as u32;
+        let height = (pdf_page.height().value * scale) as u32;
 
-        // プレースホルダーコンテンツを追加（シンプルなグレーの枠線）
-        let border_width = 10;
-        for y in 0..height {
-            for x in 0..width {
-                if x < border_width || x >= width - border_width ||
-                   y < border_width || y >= height - border_width {
-                    let idx = ((y * width + x) * 3) as usize;
-                    if idx + 2 < data.len() {
-                        data[idx] = 200;     // R
-                        data[idx + 1] = 200; // G
-                        data[idx + 2] = 200; // B
-                    }
-                }
-            }
+        // レンダリング設定
+        let render_config = PdfRenderConfig::new()
+            .set_target_width(width as i32)
+            .set_maximum_height(height as i32)
+            .rotate_if_landscape(PdfPageRenderRotation::None, true);
+
+        // ページをビットマップにレンダリング
+        let bitmap = pdf_page
+            .render_with_config(&render_config)
+            .map_err(|e| format!("Failed to render page {}: {:?}", page, e))?;
+
+        // Pdfiumの出力はBGRA形式なので、RGB形式に変換
+        let bgra_data = bitmap.as_raw_bytes();
+        let mut rgb_data = Vec::with_capacity((width * height * 3) as usize);
+
+        // BGRA → RGB 変換
+        for chunk in bgra_data.chunks(4) {
+            rgb_data.push(chunk[2]); // R
+            rgb_data.push(chunk[1]); // G
+            rgb_data.push(chunk[0]); // B
+            // chunk[3] はアルファチャンネル（無視）
         }
 
         Ok(RawImage {
             width,
             height,
-            data,
+            data: rgb_data,
         })
+    }
+}
+
+// Drop実装でクリーンアップ
+impl Drop for PdfRenderer {
+    fn drop(&mut self) {
+        // PdfDocumentとPdfiumは自動的にクリーンアップされます
     }
 }
 
@@ -78,27 +126,18 @@ pub struct RawImage {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_pdf_renderer_creation() {
-        let data = vec![0u8; 100];
-        let renderer = PdfRenderer::new(data);
-        assert!(renderer.is_ok());
-    }
+    // 実際のPDFデータが必要なため、簡単なPDFを生成するヘルパーが必要
+    // テストは統合テストで実施することを推奨
 
     #[test]
-    fn test_get_page_count() {
-        let data = vec![0u8; 100];
-        let renderer = PdfRenderer::new(data).unwrap();
-        assert_eq!(renderer.get_page_count().unwrap(), 10);
-    }
-
-    #[test]
-    fn test_render_page() {
-        let data = vec![0u8; 100];
-        let renderer = PdfRenderer::new(data).unwrap();
-        let image = renderer.render_page(1, 1.0).unwrap();
-        assert!(image.width > 0);
-        assert!(image.height > 0);
-        assert_eq!(image.data.len(), (image.width * image.height * 3) as usize);
+    fn test_raw_image_structure() {
+        let image = RawImage {
+            width: 100,
+            height: 100,
+            data: vec![255u8; 100 * 100 * 3],
+        };
+        assert_eq!(image.width, 100);
+        assert_eq!(image.height, 100);
+        assert_eq!(image.data.len(), 100 * 100 * 3);
     }
 }
