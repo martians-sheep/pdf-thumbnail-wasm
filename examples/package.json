@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:pages": "NODE_ENV=production vite build",
     "preview": "vite preview",
     "test": "vitest"
   },
